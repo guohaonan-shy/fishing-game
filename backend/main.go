@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"fishing-game/config"
@@ -17,7 +18,15 @@ func main() {
 
 	// 初始化服务层
 	rankingService := service.NewRankingService()
-	lotteryService, err := service.NewLotteryService(rankingService)
+	poolService := service.NewPoolService()
+
+	// 初始化奖池数据
+	if err := poolService.InitializePool(context.Background()); err != nil {
+		log.Fatalf("Failed to initialize pool: %v", err)
+	}
+	log.Println("Pool initialized")
+
+	lotteryService, err := service.NewLotteryService(rankingService, poolService)
 	if err != nil {
 		log.Fatalf("Failed to initialize lottery service: %v", err)
 	}
@@ -26,12 +35,13 @@ func main() {
 	// 初始化处理器
 	rankingHandler := handler.NewRankingHandler(rankingService)
 	lotteryHandler := handler.NewLotteryHandler(lotteryService)
+	poolHandler := handler.NewPoolHandler(poolService)
 
 	// 创建Gin路由器
 	r := gin.Default()
 
 	// 设置路由
-	setupRoutes(r, rankingHandler, lotteryHandler)
+	setupRoutes(r, rankingHandler, lotteryHandler, poolHandler)
 
 	// 启动服务器
 	log.Println("Server starting on :8080")
@@ -41,7 +51,7 @@ func main() {
 }
 
 // setupRoutes 设置路由
-func setupRoutes(r *gin.Engine, rankingHandler *handler.RankingHandler, lotteryHandler *handler.LotteryHandler) {
+func setupRoutes(r *gin.Engine, rankingHandler *handler.RankingHandler, lotteryHandler *handler.LotteryHandler, poolHandler *handler.PoolHandler) {
 	// 创建API组
 	api := r.Group("/fishing")
 
@@ -63,6 +73,15 @@ func setupRoutes(r *gin.Engine, rankingHandler *handler.RankingHandler, lotteryH
 		lotteries.POST("/draw", lotteryHandler.Draw)
 		// 获取用户抽奖历史
 		lotteries.GET("/history/:user_id", lotteryHandler.GetUserDrawHistory)
+	}
+
+	// 奖池相关路由
+	lottery := api.Group("/lottery")
+	{
+		// 添加新鱼到奖池
+		lottery.POST("/items", poolHandler.AddFish)
+		// 获取奖池信息
+		lottery.GET("/pool", poolHandler.GetPool)
 	}
 
 	// 健康检查
