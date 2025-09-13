@@ -12,13 +12,6 @@ type CreateUserRequest struct {
 	WxID     string `json:"wx_id" binding:"required"`    // 微信ID
 }
 
-// CreateUserResponse 创建用户响应
-type CreateUserResponse struct {
-	Username string `json:"username"` // 用户名
-	WxID     string `json:"wx_id"`    // 微信ID
-	Success  bool   `json:"success"`  // 操作结果
-}
-
 // GetUserRequest 获取用户请求
 type GetUserRequest struct {
 	WxID string `json:"wx_id" binding:"required"` // 微信ID
