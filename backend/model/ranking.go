@@ -33,14 +33,16 @@ type RankingTopResponse struct {
 
 // RankingUserResponse 获取用户排名响应
 type RankingUserResponse struct {
-	UserID string `json:"user_id"`
-	Score  int    `json:"score"`
-	Rank   int    `json:"rank"`
+	UserID   string `json:"user_id"`
+	Username string `json:"username"` // 用户名
+	Score    int    `json:"score"`
+	Rank     int    `json:"rank"`
 }
 
 // RankingEntry 排行榜条目
 type RankingEntry struct {
-	Rank   int    `json:"rank"`
-	UserID string `json:"user_id"`
-	Score  int    `json:"score"`
+	Rank     int    `json:"rank"`
+	UserID   string `json:"user_id"`
+	Username string `json:"username"`
+	Score    int    `json:"score"`
 }

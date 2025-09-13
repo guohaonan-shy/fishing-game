@@ -17,12 +17,14 @@ const (
 
 type RankingService struct {
 	redisClient *redis.Client
+	UserService *UserService
 }
 
 // NewRankingService 创建榜单服务
-func NewRankingService() *RankingService {
+func NewRankingService(UserService *UserService) *RankingService {
 	return &RankingService{
 		redisClient: config.GetRedisClient(),
+		UserService: UserService,
 	}
 }
 
@@ -62,15 +64,35 @@ func (rs *RankingService) GetTopRanking(ctx context.Context, req *model.RankingT
 		return nil, fmt.Errorf("failed to get top ranking: %w", err)
 	}
 
+	// 提取所有用户ID（wxID）
+	wxIDs := make([]string, 0, len(results))
+	for _, result := range results {
+		// 提取用户ID（去掉"user:"前缀）
+		userID := result.Member.(string)[5:]
+		wxIDs = append(wxIDs, userID)
+	}
+
+	// 批量获取用户信息
+	users, err := rs.UserService.BatchGetUsers(ctx, wxIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get users: %w", err)
+	}
+
 	entries := make([]model.RankingEntry, 0, len(results))
 	for i, result := range results {
-		// 提取用户ID（去掉"user:"前缀）
 		userID := result.Member.(string)[5:] // 去掉"user:"前缀
+		user := users.Users[userID]
+
+		username := userID // 默认使用userID作为用户名
+		if user != nil {
+			username = user.Username
+		}
 
 		entry := model.RankingEntry{
-			Rank:   offset + i + 1, // 计算实际排名
-			UserID: userID,
-			Score:  int(result.Score),
+			Rank:     offset + i + 1, // 计算实际排名
+			UserID:   userID,
+			Username: username,
+			Score:    int(result.Score),
 		}
 		entries = append(entries, entry)
 	}
@@ -86,15 +108,27 @@ func (rs *RankingService) GetTopRanking(ctx context.Context, req *model.RankingT
 func (rs *RankingService) GetUserRanking(ctx context.Context, userID string) (*model.RankingUserResponse, error) {
 	userKey := fmt.Sprintf("user:%s", userID)
 
+	// 获取用户信息
+	userResp, err := rs.UserService.GetUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user info: %w", err)
+	}
+
+	username := userID // 默认使用userID作为用户名
+	if userResp.Found {
+		username = userResp.Username
+	}
+
 	// 获取用户积分
 	score, err := rs.redisClient.ZScore(ctx, GlobalRankingKey, userKey).Result()
 	if err != nil {
 		if err == redis.Nil {
 			// 用户不在排行榜中，返回默认值
 			return &model.RankingUserResponse{
-				UserID: userID,
-				Score:  0,
-				Rank:   0,
+				UserID:   userID,
+				Username: username,
+				Score:    0,
+				Rank:     0,
 			}, nil
 		}
 		return nil, fmt.Errorf("failed to get user score: %w", err)
@@ -107,8 +141,9 @@ func (rs *RankingService) GetUserRanking(ctx context.Context, userID string) (*m
 	}
 
 	return &model.RankingUserResponse{
-		UserID: userID,
-		Score:  int(score),
-		Rank:   int(rank) + 1, // Redis rank从0开始，转换为从1开始
+		UserID:   userID,
+		Username: username,
+		Score:    int(score),
+		Rank:     int(rank) + 1, // Redis rank从0开始，转换为从1开始
 	}, nil
 }

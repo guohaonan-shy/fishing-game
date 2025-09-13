@@ -23,7 +23,7 @@ func NewUserService() *UserService {
 }
 
 // CreateUser 创建用户信息
-func (us *UserService) CreateUser(ctx context.Context, req *model.CreateUserRequest) (*model.CreateUserResponse, error) {
+func (us *UserService) CreateUser(ctx context.Context, req *model.CreateUserRequest) (bool, error) {
 	user := &model.User{
 		Username: req.Username,
 		WxID:     req.WxID,
@@ -32,21 +32,17 @@ func (us *UserService) CreateUser(ctx context.Context, req *model.CreateUserRequ
 	// 将用户信息序列化为JSON
 	userJSON, err := json.Marshal(user)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal user: %w", err)
+		return false, fmt.Errorf("failed to marshal user: %w", err)
 	}
 
 	// 存储到Redis，key为 user:{wx_id}
 	key := fmt.Sprintf("user:%s", req.WxID)
 	err = us.redisClient.Set(ctx, key, userJSON, 0).Err()
 	if err != nil {
-		return nil, fmt.Errorf("failed to save user to redis: %w", err)
+		return false, fmt.Errorf("failed to save user to redis: %w", err)
 	}
 
-	return &model.CreateUserResponse{
-		Username: req.Username,
-		WxID:     req.WxID,
-		Success:  true,
-	}, nil
+	return true, nil
 }
 
 // GetUser 获取用户信息

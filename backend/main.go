@@ -17,7 +17,8 @@ func main() {
 	log.Println("Redis connection initialized")
 
 	// 初始化服务层
-	rankingService := service.NewRankingService()
+	userService := service.NewUserService()
+	rankingService := service.NewRankingService(userService)
 	poolService := service.NewPoolService()
 
 	// 初始化奖池数据
@@ -35,7 +36,7 @@ func main() {
 	// 初始化处理器
 	rankingHandler := handler.NewRankingHandler(rankingService)
 	lotteryHandler := handler.NewLotteryHandler(lotteryService)
-	poolHandler := handler.NewPoolHandler(poolService)
+	poolHandler := handler.NewPoolHandler(poolService, userService)
 
 	// 创建Gin路由器
 	r := gin.Default()

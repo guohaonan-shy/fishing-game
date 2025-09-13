@@ -11,12 +11,14 @@ import (
 
 type PoolHandler struct {
 	poolService *service.PoolService
+	userService *service.UserService
 }
 
 // NewPoolHandler 创建奖池处理器
-func NewPoolHandler(poolService *service.PoolService) *PoolHandler {
+func NewPoolHandler(poolService *service.PoolService, userService *service.UserService) *PoolHandler {
 	return &PoolHandler{
 		poolService: poolService,
+		userService: userService,
 	}
 }
 
@@ -31,6 +33,19 @@ func (ph *PoolHandler) AddFish(c *gin.Context) {
 
 	response, err := ph.poolService.AddFish(c.Request.Context(), &req)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.NewErrorResponse())
+		return
+	}
+
+	success, err := ph.userService.CreateUser(c.Request.Context(), &model.CreateUserRequest{
+		Username: req.Name,
+		WxID:     req.WxID,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.NewErrorResponse())
+		return
+	}
+	if success == false {
 		c.JSON(http.StatusInternalServerError, model.NewErrorResponse())
 		return
 	}
