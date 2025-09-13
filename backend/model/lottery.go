@@ -24,6 +24,7 @@ type AddFishRequest struct {
 	Name        string `json:"name" binding:"required"`        // 鱼的名称
 	Description string `json:"description" binding:"required"` // 鱼的描述
 	WxID        string `json:"wx_id" binding:"required"`       // 微信ID
+	ImageName   string `json:"image_name,omitempty"`           // 指定的图片名称（可选，如fish_1, fish_2等）
 }
 
 // AddFishResponse 添加新鱼响应
@@ -31,6 +32,7 @@ type AddFishResponse struct {
 	ID          string `json:"id"`          // 生成的UUID
 	Name        string `json:"name"`        // 鱼的名称
 	Description string `json:"description"` // 鱼的描述
+	ImageURL    string `json:"image_url"`   // 图片URL
 }
 
 // PoolInfoResponse 奖池信息响应

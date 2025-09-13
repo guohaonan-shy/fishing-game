@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 
 	"fishing-game/config"
 	"fishing-game/handler"
@@ -41,6 +42,9 @@ func main() {
 	// 创建Gin路由器
 	r := gin.Default()
 
+	// 添加CORS中间件
+	r.Use(CORSMiddleware())
+
 	// 设置路由
 	setupRoutes(r, rankingHandler, lotteryHandler, poolHandler)
 
@@ -53,6 +57,9 @@ func main() {
 
 // setupRoutes 设置路由
 func setupRoutes(r *gin.Engine, rankingHandler *handler.RankingHandler, lotteryHandler *handler.LotteryHandler, poolHandler *handler.PoolHandler) {
+	// 设置静态资源服务
+	r.Static("/assets", "./assets")
+
 	// 创建API组
 	api := r.Group("/fishing")
 
@@ -92,4 +99,22 @@ func setupRoutes(r *gin.Engine, rankingHandler *handler.RankingHandler, lotteryH
 			"service": "fishing-game-backend",
 		})
 	})
+}
+
+// CORSMiddleware CORS跨域中间件
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		method := c.Request.Method
+		c.Header("Access-Control-Allow-Origin", c.GetHeader("Origin"))
+		c.Header("Access-Control-Allow-Credentials", "true")
+
+		if method == "OPTIONS" {
+			c.Header("Access-Control-Allow-Methods", c.GetHeader("Access-Control-Request-Method"))
+			c.Header("Access-Control-Allow-Headers", c.GetHeader("Access-Control-Request-Headers"))
+			c.Header("Access-Control-Max-Age", "7200")
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	}
 }

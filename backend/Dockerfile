@@ -34,8 +34,7 @@ WORKDIR /root/
 # 从构建阶段复制二进制文件
 COPY --from=builder /app/main .
 
-# 复制配置文件
-COPY --from=builder /app/configs ./configs
+COPY --from=builder /app/assets ./assets
 
 # 更改文件所有者
 RUN chown -R appuser:appgroup /root/

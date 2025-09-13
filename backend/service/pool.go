@@ -35,9 +35,9 @@ const (
 
 	// 图片资源配置
 	BaseAssetURL    = "/assets" // 基础资源URL
-	SystemImagePath = "system"  // 系统鱼图片路径
-	UserImagePath   = "users"   // 用户鱼图片路径
-	ImageExtension  = ".jpg"    // 图片扩展名
+	SystemImagePath = ""        // 系统鱼图片路径（直接在assets根目录）
+	UserImagePath   = ""        // 用户鱼图片路径（直接在assets根目录）
+	ImageExtension  = ".png"    // 图片扩展名
 )
 
 // 系统鱼类ID（固定UUID）
@@ -52,8 +52,7 @@ var (
 // 用户鱼图片资源池（fish_1.jpg到fish_15.jpg）
 var UserFishImages = []string{
 	"fish_1", "fish_2", "fish_3", "fish_4", "fish_5",
-	"fish_6", "fish_7", "fish_8", "fish_9", "fish_10",
-	"fish_11", "fish_12", "fish_13", "fish_14", "fish_15",
+	"fish_7", "fish_8", "fish_9", "fish_10",
 }
 
 // BorrowInfo 权重借用信息
@@ -110,7 +109,7 @@ func (ps *PoolService) InitializePool(ctx context.Context) error {
 			Description: "一条活泼可爱的小鱼，虽然个头不大但充满活力，游来游去像个调皮的孩子",
 			Points:      5,
 			IsUserFish:  false,
-			ImageURL:    fmt.Sprintf("%s/%s/small%s", BaseAssetURL, SystemImagePath, ImageExtension),
+			ImageURL:    fmt.Sprintf("%s/small%s", BaseAssetURL, ImageExtension),
 		},
 		{
 			ID:          MediumFishID,
@@ -118,7 +117,7 @@ func (ps *PoolService) InitializePool(ctx context.Context) error {
 			Description: "体型适中的鱼儿，肉质鲜美，正好够一顿美餐，是钓鱼人最喜欢的收获",
 			Points:      20,
 			IsUserFish:  false,
-			ImageURL:    fmt.Sprintf("%s/%s/medium%s", BaseAssetURL, SystemImagePath, ImageExtension),
+			ImageURL:    fmt.Sprintf("%s/medium%s", BaseAssetURL, ImageExtension),
 		},
 		{
 			ID:          LargeFishID,
@@ -126,7 +125,7 @@ func (ps *PoolService) InitializePool(ctx context.Context) error {
 			Description: "一条威武的大鱼，力大无穷，上钩时差点把鱼竿都拉断了，绝对是今日最佳战利品",
 			Points:      100,
 			IsUserFish:  false,
-			ImageURL:    fmt.Sprintf("%s/%s/large%s", BaseAssetURL, SystemImagePath, ImageExtension),
+			ImageURL:    fmt.Sprintf("%s/large%s", BaseAssetURL, ImageExtension),
 		},
 		{
 			ID:          RareFishID,
@@ -134,7 +133,7 @@ func (ps *PoolService) InitializePool(ctx context.Context) error {
 			Description: "传说中的神秘鱼类，全身闪闪发光，据说一生只能遇到一次，是所有钓鱼人梦寐以求的终极目标",
 			Points:      500,
 			IsUserFish:  false,
-			ImageURL:    fmt.Sprintf("%s/%s/rare%s", BaseAssetURL, SystemImagePath, ImageExtension),
+			ImageURL:    fmt.Sprintf("%s/rare%s", BaseAssetURL, ImageExtension),
 		},
 	}
 
@@ -186,9 +185,34 @@ func getRandomUserImage() (string, error) {
 
 	// 构建完整的图片URL
 	imageName := UserFishImages[randomIndex.Int64()]
-	imageURL := fmt.Sprintf("%s/%s/%s%s", BaseAssetURL, UserImagePath, imageName, ImageExtension)
+	imageURL := fmt.Sprintf("%s/%s%s", BaseAssetURL, imageName, ImageExtension)
 
 	return imageURL, nil
+}
+
+// getUserImageURL 获取用户鱼图片URL（支持指定或随机）
+func getUserImageURL(imageName string) (string, error) {
+	// 如果指定了图片名称，验证并使用指定的图片
+	if imageName != "" {
+		// 验证指定的图片名称是否在可用列表中
+		found := false
+		for _, availableName := range UserFishImages {
+			if availableName == imageName {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return "", fmt.Errorf("invalid image name: %s, available images: %v", imageName, UserFishImages)
+		}
+
+		imageURL := fmt.Sprintf("%s/%s%s", BaseAssetURL, imageName, ImageExtension)
+		return imageURL, nil
+	}
+
+	// 如果没有指定图片名称，使用随机策略
+	return getRandomUserImage()
 }
 
 // AddFish 添加新鱼到奖池
@@ -199,10 +223,10 @@ func (ps *PoolService) AddFish(ctx context.Context, req *model.AddFishRequest) (
 	// 计算权重
 	weight := ps.calculateWeight(req.Description)
 
-	// 随机选择用户图片
-	imageURL, err := getRandomUserImage()
+	// 获取用户图片URL（指定或随机）
+	imageURL, err := getUserImageURL(req.ImageName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get random user image: %w", err)
+		return nil, fmt.Errorf("failed to get user image: %w", err)
 	}
 
 	// 创建新鱼
@@ -241,6 +265,7 @@ func (ps *PoolService) AddFish(ctx context.Context, req *model.AddFishRequest) (
 		ID:          fishID,
 		Name:        req.Name,
 		Description: req.Description,
+		ImageURL:    newFish.ImageURL,
 	}, nil
 }
 
